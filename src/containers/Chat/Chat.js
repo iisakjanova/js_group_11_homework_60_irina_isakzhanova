@@ -8,6 +8,8 @@ import {URL} from "../../constants";
 
 const ERROR_MESSAGE_TEXT = 'Something went wrong... Error status ';
 
+let lastDatetime = '';
+
 const Chat = () => {
     const [messages, setMessages] = useState([]);
     const [error, setError] = useState('');
@@ -15,17 +17,48 @@ const Chat = () => {
     useEffect(() => {
         (async () => {
             try {
-                const messages = await getMessages();
-                setMessages(messages);
+                const result = await getMessages();
+                setMessages(result);
                 setError('');
+
+                lastDatetime = result[result.length - 1].datetime;
             } catch (e) {
                 setError(ERROR_MESSAGE_TEXT + e.response.status);
             }
         })();
     }, []);
 
+    useEffect(() => {
+        const interval = setInterval(async () => {
+            try {
+                const result = await getNewMessages();
+                setError('');
+
+                if (result && result.length > 0) {
+                    setMessages(prevMessages => (
+                        [
+                            ...prevMessages,
+                            ...result
+                        ]
+                    ));
+
+                    lastDatetime = result[result.length - 1].datetime;
+                }
+            } catch (e) {
+                setError(ERROR_MESSAGE_TEXT + e.response.status);
+            }
+        }, 2000);
+
+        return () => clearInterval(interval);
+    }, []);
+
     const getMessages = async () => {
         const response = await axios.get(URL);
+        return response.data;
+    };
+
+    const getNewMessages = async () => {
+        const response = await axios.get(`${URL}?datetime=${lastDatetime}`);
         return response.data;
     };
 
