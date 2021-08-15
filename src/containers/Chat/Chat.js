@@ -5,7 +5,8 @@ import React from 'react';
 import Message from "../../components/Message/Message";
 
 import {URL} from "../../constants";
-import {ERROR_MESSAGE_TEXT} from "../../constants";
+
+const ERROR_MESSAGE_TEXT = 'Something went wrong... Error status ';
 
 const Chat = () => {
     const [messages, setMessages] = useState([]);
@@ -30,6 +31,7 @@ const Chat = () => {
 
     return (
         <>
+            {error ? <div className="text-center bg-danger text-white py-2">{error}</div> : null }
             <h4 className="text-center">Hello!</h4>
             <h5 className="text-center">Welcome to JS group 10-11 chat!</h5>
             <div className="col-md-8 col-sm-12 px-3 py-3 mx-auto bg-light">
