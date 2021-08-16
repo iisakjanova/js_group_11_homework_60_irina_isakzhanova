@@ -3,16 +3,16 @@ import axios from "axios";
 
 import React from 'react';
 import Message from "../../components/Message/Message";
+import MessageForm from "../../components/MessageForm/MessageForm";
 
 import {URL} from "../../constants";
-
 const ERROR_MESSAGE_TEXT = 'Something went wrong... Error status ';
-
-let lastDatetime = '';
+let lastDatetime;
 
 const Chat = () => {
     const [messages, setMessages] = useState([]);
     const [error, setError] = useState('');
+    const [currentMessage, setCurrentMessage] = useState('');
 
     useEffect(() => {
         (async () => {
@@ -29,26 +29,7 @@ const Chat = () => {
     }, []);
 
     useEffect(() => {
-        const interval = setInterval(async () => {
-            try {
-                const result = await getNewMessages();
-                setError('');
-
-                if (result && result.length > 0) {
-                    setMessages(prevMessages => (
-                        [
-                            ...prevMessages,
-                            ...result
-                        ]
-                    ));
-
-                    lastDatetime = result[result.length - 1].datetime;
-                }
-            } catch (e) {
-                setError(ERROR_MESSAGE_TEXT + e.response.status);
-            }
-        }, 2000);
-
+        const interval = checkForNewMessages();
         return () => clearInterval(interval);
     }, []);
 
@@ -60,6 +41,57 @@ const Chat = () => {
     const getNewMessages = async () => {
         const response = await axios.get(`${URL}?datetime=${lastDatetime}`);
         return response.data;
+    };
+
+    const storeNewMessagesLocally = data => {
+        if (data && data.length > 0) {
+            setMessages(prevMessages => (
+                [
+                    ...prevMessages,
+                    ...data
+                ]
+            ));
+
+            lastDatetime = data[data.length - 1].datetime;
+        }
+    };
+
+    const checkForNewMessages = () => {
+        return setInterval(async () => {
+            try {
+                const result = await getNewMessages();
+                setError('');
+                storeNewMessagesLocally(result);
+            } catch (e) {
+                setError(ERROR_MESSAGE_TEXT + e.response.status);
+            }
+        }, 2000);
+    };
+
+    const handleFormChange = (author, text) => {
+        const newMessage = {
+            author,
+            text
+        };
+
+        setCurrentMessage(newMessage);
+    };
+
+    const handleFormSend = async () => {
+        try {
+            const data = new URLSearchParams();
+            data.set('message', currentMessage.text);
+            data.set('author', currentMessage.author);
+            await axios.post(URL, data);
+            setCurrentMessage('');
+
+            const result = await getNewMessages();
+            storeNewMessagesLocally(result);
+
+            setError('');
+        } catch (e) {
+            setError(ERROR_MESSAGE_TEXT + e.response.status);
+        }
     };
 
     return (
@@ -74,6 +106,11 @@ const Chat = () => {
                         key={message._id}
                     />
                 ))}
+                <MessageForm
+                    value={currentMessage}
+                    onChange={handleFormChange}
+                    onSend={handleFormSend}
+                />
             </div>
         </>
     );
